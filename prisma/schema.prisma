@@ -1,0 +1,152 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  USER
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Profile {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  name         String
+  role         Role          @default(USER)
+  status       String        @default("ACTIVE")
+  
+  // Multi-tier relations
+  adminId      String?
+  admin        Profile?      @relation("AdminToUsers", fields: [adminId], references: [id])
+  childUsers   Profile[]     @relation("AdminToUsers")
+  
+  balance      Float         @default(0.0)
+  totalEarned  Float         @default(0.0)
+  customCpm    Float?
+  
+  urls         Url[]
+  withdrawals  Withdrawal[]
+  transactions Transaction[]
+  fraudLogs    FraudLog[]
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@map("profiles")
+}
+
+model Url {
+  id          String      @id @default(uuid())
+  originalUrl String      @map("original_url")
+  shortCode   String      @unique @map("short_code")
+  customAlias String?     @unique @map("custom_alias")
+  title       String?
+  qrCodeUrl   String?     @map("qr_code_url")
+  isActive    Boolean     @default(true) @map("is_active")
+  
+  userId      String      @map("user_id")
+  user        Profile     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  analytics   Analytics[]
+  adViews     AdView[]
+
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  @@map("urls")
+}
+
+model Analytics {
+  id        String   @id @default(uuid())
+  urlId     String   @map("url_id")
+  url       Url      @relation(fields: [urlId], references: [id], onDelete: Cascade)
+  
+  ip        String
+  country   String   @default("Unknown")
+  device    String   @default("Desktop")
+  browser   String   @default("Unknown")
+  referrer  String   @default("Direct")
+  
+  isValid   Boolean  @default(true) @map("is_valid")
+  earnings  Float    @default(0.0)
+  cpm       Float    @default(3.50)
+  
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("analytics")
+}
+
+model AdView {
+  id        String   @id @default(uuid())
+  urlId     String   @map("url_id")
+  url       Url      @relation(fields: [urlId], references: [id], onDelete: Cascade)
+  step      Int
+  ip        String
+  completed Boolean  @default(false)
+  timestamp DateTime @default(now())
+
+  @@map("ad_views")
+}
+
+model Withdrawal {
+  id            String           @id @default(uuid())
+  userId        String           @map("user_id")
+  user          Profile          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  amount        Float
+  commissionFee Float            @map("commission_fee")
+  netAmount     Float            @map("net_amount")
+  
+  paymentMethod String           @map("payment_method")
+  paymentDetails String          @map("payment_details")
+  status        WithdrawalStatus @default(PENDING)
+  
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  @@map("withdrawals")
+}
+
+model Transaction {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  user        Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount      Float
+  type        String
+  description String
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("transactions")
+}
+
+model FraudLog {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  user      Profile? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  ip        String
+  reason    String
+  userAgent String   @map("user_agent")
+  details   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("fraud_logs")
+}
+
+model SystemSetting {
+  key   String @id
+  value String
+
+  @@map("system_settings")
+}
