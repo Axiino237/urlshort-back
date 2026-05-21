@@ -50,11 +50,13 @@ export class UrlsController {
       const userAgent = req.headers['user-agent'] || '';
 
       // Direct visitor to the React frontend 3-step high revenue ad platform
-      const redirectUrl = `http://localhost:5173/ad/step1?code=${match.shortCode}`;
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const redirectUrl = `${frontendUrl}/ad/step1?code=${match.shortCode}`;
       return res.redirect(redirectUrl);
     } catch (err) {
       // Fallback redirect to public landing on code error
-      return res.redirect('http://localhost:5173/?error=invalid-link');
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      return res.redirect(`${frontendUrl}/?error=invalid-link`);
     }
   }
 }

@@ -30,7 +30,8 @@ export class UrlsService {
       }
     }
 
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=http://localhost:5173/s/${shortCode}`;
+    const backendUrl = process.env.BACKEND_URL || 'https://urlshort-back.onrender.com';
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${backendUrl}/s/${shortCode}`;
 
     // Create Title extract
     let title = originalUrl.replace('https://', '').replace('http://', '').split('/')[0] + ' Redirect';
